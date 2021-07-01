@@ -1,3 +1,3 @@
 import os
-filepath = "\"Projects/guess_my_number.py\""
+filepath = "\"Day 4/pygame_starter.py\""
 os.system("python3 " + filepath)
