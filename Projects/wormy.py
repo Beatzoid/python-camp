@@ -5,7 +5,10 @@
 #
 # Modified by Beatzoid
 # 7/1/21
-
+# Modifications
+# - Main Menu
+# - Wall Wrapping
+# - Bad and good apples
 
 import random
 import pygame
@@ -21,6 +24,9 @@ assert WINDOWHEIGHT % CELLSIZE == 0, "Window height must be a multiple of cell s
 CELLWIDTH = int(WINDOWWIDTH / CELLSIZE)
 CELLHEIGHT = int(WINDOWHEIGHT / CELLSIZE)
 
+TIMETOWAIT = 0
+TIMEELAPSED = 0
+
 #             R    G    B
 WHITE = (255, 255, 255)
 BLACK = (0,   0,   0)
@@ -28,6 +34,7 @@ RED = (255,   0,   0)
 GREEN = (0, 255,   0)
 DARKGREEN = (0, 155,   0)
 DARKGRAY = (40,  40,  40)
+YELLOW = (255, 255, 0)
 BGCOLOR = BLACK
 
 UP = 'up'
@@ -54,6 +61,8 @@ def main():
 
 
 def runGame():
+    global FPS, TIMEELAPSED, TIMETOWAIT
+
     # Set a random start point.
     startx = random.randint(5, CELLWIDTH - 6)
     starty = random.randint(5, CELLHEIGHT - 6)
@@ -63,7 +72,7 @@ def runGame():
     direction = RIGHT
 
     # Start the apple in a random place.
-    apple = getRandomLocation()
+    apple = {"position": getRandomLocation(), "type": "normal"}
 
     while True:  # main game loop
         for event in pygame.event.get():  # event handling loop
@@ -81,17 +90,34 @@ def runGame():
                 elif event.key == K_ESCAPE:
                     terminate()
 
-        # check if the worm has hit itself or the edge
-        if wormCoords[HEAD]['x'] == -1 or wormCoords[HEAD]['x'] == CELLWIDTH or wormCoords[HEAD]['y'] == -1 or wormCoords[HEAD]['y'] == CELLHEIGHT:
-            return  # game over
+        # If the worm collides with itself
         for wormBody in wormCoords[1:]:
-            if wormBody['x'] == wormCoords[HEAD]['x'] and wormBody['y'] == wormCoords[HEAD]['y']:
-                return  # game over
+            if wormBody["x"] == wormCoords[HEAD]["x"] and wormBody["y"] == wormCoords[HEAD]["y"]:
+                return
 
-        # check if worm has eaten an apply
-        if wormCoords[HEAD]['x'] == apple['x'] and wormCoords[HEAD]['y'] == apple['y']:
-            # don't remove worm's tail segment
-            apple = getRandomLocation()  # set a new apple somewhere
+        # Wrap the snake when it hits a wall
+        if wormCoords[HEAD]["x"] == CELLWIDTH + 1:
+            wormCoords[HEAD]["x"] = 0
+        elif wormCoords[HEAD]["y"] == CELLHEIGHT + 1:
+            wormCoords[HEAD]["y"] = 0
+        elif wormCoords[HEAD]["x"] == -1:
+            wormCoords[HEAD]["x"] = CELLWIDTH
+        elif wormCoords[HEAD]["y"] == -1:
+            wormCoords[HEAD]["y"] = CELLHEIGHT
+
+        if TIMETOWAIT != 0:
+            checkFPSResetTime()
+
+
+        # check if worm has eaten an apple
+        if wormCoords[HEAD]['x'] == apple["position"]["x"] and wormCoords[HEAD]["y"] == apple["position"]["y"]:
+            if apple["type"] == "boost":
+                FPS = 10 # Easier
+                resetFPS()
+            elif apple["type"] == "poison":
+                FPS = 20 # Harder
+                resetFPS()
+            apple = generateApple()
         else:
             del wormCoords[-1]  # remove worm's tail segment
 
@@ -117,6 +143,28 @@ def runGame():
         pygame.display.update()
         FPSCLOCK.tick(FPS)
 
+def checkFPSResetTime():
+    global TIMEELAPSED, TIMETOWAIT, FPS
+
+    TIMEELAPSED += 100
+    if TIMEELAPSED == TIMETOWAIT:
+        TIMETOWAIT = 0
+        TIMEELAPSED = 0
+        FPS = 15
+
+
+def resetFPS():
+    global TIMETOWAIT, TIMEELAPSED
+    TIMETOWAIT = 5000
+    TIMEELAPSED = 0
+    
+def button(text, coords):
+    font = pygame.font.Font('freesansbold.ttf', 30)
+    buttonText = font.render(text, True, WHITE, DARKGREEN)
+    buttonRect = buttonText.get_rect()
+    buttonRect.topleft = coords
+    DISPLAYSURF.blit(buttonText, buttonRect)
+    return buttonRect
 
 def drawPressKeyMsg():
     pressKeySurf = BASICFONT.render('Press a key to play.', True, DARKGRAY)
@@ -139,28 +187,27 @@ def checkForKeyPress():
 
 def showStartScreen():
     titleFont = pygame.font.Font('freesansbold.ttf', 100)
-    titleSurf1 = titleFont.render('Wormy!', True, WHITE, DARKGREEN)
-    titleSurf2 = titleFont.render('Wormy!', True, GREEN)
 
     degrees1 = 0
     degrees2 = 0
     while True:
         DISPLAYSURF.fill(BGCOLOR)
-        rotatedSurf1 = pygame.transform.rotate(titleSurf1, degrees1)
-        rotatedRect1 = rotatedSurf1.get_rect()
-        rotatedRect1.center = (WINDOWWIDTH / 2, WINDOWHEIGHT / 2)
-        DISPLAYSURF.blit(rotatedSurf1, rotatedRect1)
+        titleSurf = titleFont.render('Wormy!', True, WHITE, DARKGREEN)
+        playButton = titleSurf.get_rect()
+        playButton.topleft = (120, 0)
+        DISPLAYSURF.blit(titleSurf, playButton)
 
-        rotatedSurf2 = pygame.transform.rotate(titleSurf2, degrees2)
-        rotatedRect2 = rotatedSurf2.get_rect()
-        rotatedRect2.center = (WINDOWWIDTH / 2, WINDOWHEIGHT / 2)
-        DISPLAYSURF.blit(rotatedSurf2, rotatedRect2)
+        playButton = button("Play", (270, 150))
+        quitButton = button("Quit", (270, 200))
 
-        drawPressKeyMsg()
+        for event in pygame.event.get():
+            if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                mouse = pygame.mouse.get_pos()
+                if playButton.collidepoint(mouse):
+                    return # Start the game
+                elif quitButton.collidepoint(mouse):
+                    terminate() # End the game
 
-        if checkForKeyPress():
-            pygame.event.get()  # clear event queue
-            return
         pygame.display.update()
         FPSCLOCK.tick(FPS)
         degrees1 += 3  # rotate by 3 degrees each frame
@@ -204,6 +251,12 @@ def drawScore(score):
     scoreRect.topleft = (WINDOWWIDTH - 120, 10)
     DISPLAYSURF.blit(scoreSurf, scoreRect)
 
+def drawLives(lives):
+    livesSurf = BASICFONT.render('Lives: %s' % (lives), True, WHITE)
+    livesRect = livesSurf.get_rect()
+    livesRect.topleft = (WINDOWWIDTH - 120, 30)
+    DISPLAYSURF.blit(livesSurf, livesRect)
+
 
 def drawWorm(wormCoords):
     for coord in wormCoords:
@@ -216,11 +269,25 @@ def drawWorm(wormCoords):
         pygame.draw.rect(DISPLAYSURF, GREEN, wormInnerSegmentRect)
 
 
-def drawApple(coord):
-    x = coord['x'] * CELLSIZE
-    y = coord['y'] * CELLSIZE
+def drawApple(apple):
+    x = apple["position"]["x"] * CELLSIZE
+    y = apple["position"]["y"] * CELLSIZE
     appleRect = pygame.Rect(x, y, CELLSIZE, CELLSIZE)
-    pygame.draw.rect(DISPLAYSURF, RED, appleRect)
+
+    if apple["type"] == "normal":
+        pygame.draw.rect(DISPLAYSURF, RED, appleRect)
+    elif apple["type"] == "boost":
+        pygame.draw.rect(DISPLAYSURF, YELLOW, appleRect)
+    elif apple["type"] == "poison":
+        pygame.draw.rect(DISPLAYSURF, DARKGREEN, appleRect)
+
+def generateApple():
+    if random.randint(1, 10) == 1: # 10%
+        return {"position": getRandomLocation(), "type": "boost"}
+    elif random.randint(1, 20) == 1: # 5%
+        return {"position": getRandomLocation(), "type": "poison"}
+    else:
+        return {"position": getRandomLocation(), "type": "normal"}
 
 
 def drawGrid():

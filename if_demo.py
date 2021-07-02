@@ -9,17 +9,17 @@ heater = False
 fan = False
 
 if currentTemp < desiredTemp:
-    heater = True
-    fan = False
-    print("Heater on")
-    print("Fan off")
+	heater = True
+	fan = False
+	print("Heater on")
+	print("Fan off")
 elif currentTemp > desiredTemp:
-    fan = True
-    heater = False
-    print("Fan on")
-    print("Heater off")
+	fan = True
+	heater = False
+	print("Fan on")
+	print("Heater off")
 else:
-    heater = False
-    fan = False
-    print("Heater off")
-    print("Fan off")
+	heater = False
+	fan = False
+	print("Heater off")
+	print("Fan off")

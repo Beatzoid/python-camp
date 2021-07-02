@@ -10,12 +10,10 @@
 # - define local variables which can improve the efficiency of the program
 
 def hello_world():
-    print("Hello World!")
-
+	print("Hello World!")
 
 def multiply(x, y):
-    return x * y
-
+	return x * y 
 
 num1 = 3
 num2 = 4
